@@ -19,6 +19,8 @@ mongoose.connect(process.env.DB_CONNECT,
         }
     });
 
+app.use(express.json());
+
 app.use('/api/user', auth);
 
 app.listen(3000, () => console.log("Server is running"));
