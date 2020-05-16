@@ -3,6 +3,7 @@ const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../model/User');
 const { registrationSchema, loginSchema } = require('../validations');
+const { verify_token } = require('../middleware/token_verifier');
 
 
 router.post('/register', async (req, res) => {
@@ -15,7 +16,7 @@ router.post('/register', async (req, res) => {
             console.log("Invalid registration request : Email already exists");
             return res.status(400).send('Email address already exists');
         }
-        const salt = await bcryptjs.genSalt(15);
+        const salt = await bcryptjs.genSalt(6);
         const hash = await bcryptjs.hash(req.body.password, salt);
         const user = new User({
             name: req.body.name,
@@ -46,9 +47,10 @@ router.post('/login', async (req, res) => {
     if (!error) {
         const user = await User.findOne({ email: req.body.email });
         if (!user) return res.status(400).send("Email or password is wrong");
-        const password = await bcryptjs.compare(req.body.password,user.password);
-        if(!password) return res.status(400).send("Email or password is wrong");
-        res.status(200).send("User logged in");
+        const password = await bcryptjs.compare(req.body.password, user.password);
+        if (!password) return res.status(400).send("Email or password is wrong");
+        const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET, { expiresIn: '7d' });
+        res.header('auth-token', token).status(200).send(token);
         console.log('Successful login');
     }
     else {
@@ -56,5 +58,11 @@ router.post('/login', async (req, res) => {
         res.status(400).send(error);
     }
 });
+
+router.post('/verify_login', verify_token, async (req, res) => {
+    res.status(200).send("User is logged in");
+});
+
+
 
 module.exports = router;
